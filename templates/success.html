@@ -1,0 +1,15 @@
+{% from "macros.html" import render_data %}
+<h1> This data was saved to the database! </h1>
+<form method=post action="/">
+    {{registration_form.hidden_tag()}}
+  <dl>
+    {{ render_data(registration_form.first_name_field) }}
+    {{ render_data(registration_form.last_name_field) }}
+    {{ render_data(registration_form.address_line_one_field) }}
+    {{ render_data(registration_form.address_line_two_field) }}
+    {{ render_data(registration_form.city_field) }}
+    {{ render_data(registration_form.state_select_field) }}
+    {{ render_data(registration_form.country_select_field) }}
+  </dl>
+  <p><input type=submit value=Register>
+</form>

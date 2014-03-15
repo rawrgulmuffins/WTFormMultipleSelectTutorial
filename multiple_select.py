@@ -14,6 +14,7 @@ http://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world
 """
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.exc import IntegrityError
 
 """
 Need to configure our application and the database connection. In most cases
@@ -22,9 +23,16 @@ you probably want to load all of this from a configuration file.
 In this tutorial we're just going to use a basic sqlalchemy test database.
 """
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'Insert_random_string_here'
 #Set this configuration to True if you want to see all of the SQL generated.
 app.config['SQLALCHEMY_ECHO'] = False
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+
+#WTForms configuration strings
+app.config['WTF_CSRF_ENABLED'] = True
+#CSRF tokens are important. Read more about them here,
+#https://www.owasp.org/index.php/Cross-Site_Request_Forgery_(CSRF)_Prevention_Cheat_Sheet
+app.config['WTF_CSRF_SECRET_KEY'] = 'Insert_random_string_here'
 db = SQLAlchemy(app)
 
 # --------------------- should be in a models package -- ---------------------
@@ -119,7 +127,7 @@ class State(db.Model):  # pylint: disable-msg=R0903
     __tablename__ = "State"
 
     state_id = db.Column(db.Integer, primary_key=True)
-    state_name = db.Column(db.String(10))
+    state_name = db.Column(db.String(10), unique=True)
 
     def __init__(self, state_name):
         """
@@ -139,7 +147,7 @@ class Country(db.Model):  # pylint: disable-msg=R0903
 
     country_id = db.Column(db.Integer, primary_key=True)
     #longest country length is currently 163 letters
-    country_name = db.Column(db.String(256))
+    country_name = db.Column(db.String(256), unique=True)
 
     def __init__(self, country_name):
         """
@@ -172,7 +180,11 @@ def create_example_data():
     db.session.add(country_model)
     # Interesting Note: things will be commited in reverse order from when they
     # were added.
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError as e:
+        print("attempted to push data to database. Not first run. continuing\
+                as normal")
 
 # --------------------- should be in a models package --- ---------------------
 
@@ -190,22 +202,50 @@ from flask.ext.wtf import Form
 
 class RegistrationForm(Form):
     """
+    This Form class contains all of the fileds that make up our registration
+    Form. 
     """
+    #Get all of the text fields out of the way.
     first_name_field = wtforms.TextField(
-            validators=[validators.Length(max=70), ])
+            label="First Name",
+            validators=[validators.Length(max=70), validators.Required()])
     last_name_field = wtforms.TextField(
-            validators=[validators.Length(max=70), ])
+            label="Last Name",
+            validators=[validators.Length(max=70), validators.Required()])
     address_line_one_field = wtforms.TextField(
-            validators=[validators.Length(max=256), ])
+            label="Address",
+            validators=[validators.Length(max=256), validators.Required()])
     address_line_two_field = wtforms.TextField(
+            label="Second Address",
             validators=[validators.Length(max=256), ])
     city_field = wtforms.TextField(
-            validators=[validators.Length(max=50), ])
-    state_select_field = wtforms.SelectField(label="state")
-    country_select_field = wtforms.SelectField(label="country")
+            label="City",
+            validators=[validators.Length(max=50), validators.Required()])
+    # Now let's set all of our select fields.
+    state_select_field = wtforms.SelectField(label="State", coerce=int)
+    country_select_field = wtforms.SelectField(label="Country", coerce=int)
 
 # ------------------------ should be in a forms package -----------------------
 
+#this should be in a file I normally call views.py
+import flask
+
+def populate_form_choices(registration_form):
+    """
+    Pulls choices from the database to populate our select fields.
+    """
+    states = State.query.all()
+    countries = Country.query.all()
+    state_names = []
+    for state in states:
+        state_names.append(state.state_name)
+    state_choices = list(enumerate(state_names))
+    country_names = []
+    for country in countries:
+        country_names.append(country.country_name)
+    country_choices = list(enumerate(country_names))
+    registration_form.state_select_field.choices = state_choices
+    registration_form.country_select_field.choices = country_choices
 
 @app.route('/', methods=['GET', 'POST'])
 def demonstration():
@@ -214,20 +254,32 @@ def demonstration():
     a Get request. If the use is attempting to Post then this view will push
     the data to the database.
     """
-    #if method == GET
-        #Get data from database
-        #push data into Form
-        #render registration template
-    #if method == POST
-        #if forms valid
-            #push form data to database
-            #render information page
-        #else
-            #re-render registartion template with error
-    return 'Hello World!'
+    registration_form = RegistrationForm()
+    populate_form_choices(registration_form)
+    if flask.request.method == 'POST' and registration_form.validate():
+        registered_user = RegisteredUser(
+            first_name=registration_form.data['first_name_field'],
+            last_name=registration_form.data['last_name_field'],
+            address_line_one=registration_form.data['address_line_one_field'],
+            address_line_two=registration_form.data['address_line_two_field'],
+            city=registration_form.data['city_field'],
+            state_id=registration_form.data['state_select_field'],
+            country_id=registration_form.data['country_select_field'],)
+        db.session.add(registered_user)
+        db.session.commit()
+        return flask.render_template(
+            template_name_or_list='success.html',
+            registration_form=registration_form,)
+    return flask.render_template(
+            template_name_or_list='registration.html',
+            registration_form=registration_form,)
 
+
+#Finally, this is for development purposes only. I normally have this in a
+#file called RunServer.py. For actually delivering your application you should
+#run behind a web server of some kind (Apache, Nginix, Heroku).
 
 if __name__ == '__main__':
     db.create_all()
     create_example_data()
-    app.run()
+    app.run(debug=True)
