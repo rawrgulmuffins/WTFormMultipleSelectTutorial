@@ -239,11 +239,14 @@ def populate_form_choices(registration_form):
     state_names = []
     for state in states:
         state_names.append(state.state_name)
+    #choices need to come in the form of a list comprised of enumerated lists
+    #example [('cpp', 'C++'), ('py', 'Python'), ('text', 'Plain Text')]
     state_choices = list(enumerate(state_names))
     country_names = []
     for country in countries:
         country_names.append(country.country_name)
     country_choices = list(enumerate(country_names))
+    #now that we've built our choices, we need to set them.
     registration_form.state_select_field.choices = state_choices
     registration_form.country_select_field.choices = country_choices
 
@@ -254,9 +257,20 @@ def demonstration():
     a Get request. If the use is attempting to Post then this view will push
     the data to the database.
     """
+    #this parts a little hard to understand. flask-wtforms does an implicit
+    #call each time you create a form object. It attempts to see if there's a
+    #request.form object in this session and if there is it adds the data from
+    #the request to the form object.
     registration_form = RegistrationForm()
+    #Before we attempt to validate our form data we have to set our select
+    #field choices. This is just something you need to do if you're going to 
+    #use WTForms, even if it seems silly.
     populate_form_choices(registration_form)
+    #This means that if we're not sending a post request then this if statement
+    #will always fail. So then we just move on to render the template normally.
     if flask.request.method == 'POST' and registration_form.validate():
+        #If we're making a post request and we passed all the validators then
+        #create a registered user model and push that model to the database.
         registered_user = RegisteredUser(
             first_name=registration_form.data['first_name_field'],
             last_name=registration_form.data['last_name_field'],
