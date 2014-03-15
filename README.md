@@ -1,4 +1,4 @@
-WTFormMultipleSelectTutorial
+WTForms Multiple Select Tutorial
 ============================
 
 This is a tutorial meant to show the basics of using SQLAlchemy and WTForms to generate a basic registration page. There's a lot to this tutorial but you should be able to get it up and running after following these basic steps.
