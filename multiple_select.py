@@ -11,6 +11,8 @@ http://flask.pocoo.org/docs/patterns/packages/
 
 NOTE: If you want another flask tutorial you should head on over to
 http://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world
+
+Author: Alex Lord
 """
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
