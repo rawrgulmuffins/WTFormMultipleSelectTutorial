@@ -7,7 +7,7 @@ This is a tutorial meant to show the basics of using SQLAlchemy and WTForms to g
 
     Install sqlite (debain: sudo apt-get install sqlite)
 
-    run virtualenv flask
+    virtualenv flask
 
     source flask/bin/activate
 
