@@ -17,7 +17,7 @@ This is a tutorial meant to show the basics of using SQLAlchemy and WTForms to g
 virtualenv flask
 source flask/bin/activate
 pip install flask
-pip install flask-wtforms
+pip install flask-wtf
 pip install flask-sqlalchemy
 ```
 
