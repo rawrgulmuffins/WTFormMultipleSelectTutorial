@@ -186,7 +186,7 @@ def create_example_data():
         db.session.commit()
     except IntegrityError as e:
         print("attempted to push data to database. Not first run. continuing\
-                as normal")
+                as normal.")
 
 # --------------------- should be in a models package --- ---------------------
 
