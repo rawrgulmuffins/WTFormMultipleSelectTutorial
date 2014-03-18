@@ -283,13 +283,19 @@ def demonstration():
             country_id=registration_form.data['country_select_field'],)
         db.session.add(registered_user)
         db.session.commit()
-        return flask.render_template(
-            template_name_or_list='success.html',
-            registration_form=registration_form,)
+        flask.flash("This data was saved to the database!")
+        return flask.redirect(flask.url_for(
+            'user_detail',user_id=registered_user.registered_id))
     return flask.render_template(
             template_name_or_list='registration.html',
             registration_form=registration_form,)
 
+@app.route('/user/<user_id>')
+def user_detail(user_id):
+    user = RegisteredUser.query.get_or_404(user_id)
+    return flask.render_template(
+        template_name_or_list='success.html',
+        user=user)
 
 #Finally, this is for development purposes only. I normally have this in a
 #file called RunServer.py. For actually delivering your application you should
