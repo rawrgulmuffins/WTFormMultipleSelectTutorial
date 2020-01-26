@@ -252,7 +252,7 @@ def populate_form_choices(registration_form):
     #now that we've built our choices, we need to set them.
     registration_form.state_select_field.choices = state_choices
     registration_form.country_select_field.choices = country_choices
-    registration_form.first_name_field.size = 100
+    
 @app.route('/', methods=['GET', 'POST'])
 def demonstration():
     """
