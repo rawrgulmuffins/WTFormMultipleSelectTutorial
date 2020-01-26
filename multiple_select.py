@@ -314,33 +314,37 @@ def update_user(user_id):
     a Get request. If the use is attempting to Post then this view will push
     the data to the database.
     """
-    #this parts a little hard to understand. flask-wtforms does an implicit
-    #call each time you create a form object. It attempts to see if there's a
-    #request.form object in this session and if there is it adds the data from
-    #the request to the form object.
+    #instantiate the user you want to update
     reg_user = RegisteredUser.query.filter(RegisteredUser.registered_id == user_id).first()
-    print("DEBUGYYYYYYYYYYYYYYYYYYYYYY:",reg_user)
-    registration_form = RegistrationForm(reg_user)
-
-    # populate_form_choices(registration_form)
+    #instantiate the form and populate it with values from the instantiated user
+    registration_form = RegistrationForm(
+        first_name_field=reg_user.first_name,
+        last_name_field=reg_user.last_name,
+        address_line_one_field=reg_user.address_line_one,
+        address_line_two_field=reg_user.address_line_two,
+        city_field=reg_user.city,
+        state_select_field=reg_user.state_id,
+        country_select_field=reg_user.country_id
+    )
+    #the form includes some drop downs for selecting states and countries. this function adds these to the form
+    populate_form_choices(registration_form)
 
     if flask.request.method == 'POST' and registration_form.validate():
         #If we're making a post request and we passed all the validators then
-        #create a registered user model and push that model to the database.
-
-        registered_user = RegisteredUser(
-            first_name=registration_form.data['first_name_field'],
-            last_name=registration_form.data['last_name_field'],
-            address_line_one=registration_form.data['address_line_one_field'],
-            address_line_two=registration_form.data['address_line_two_field'],
-            city=registration_form.data['city_field'],
-            state_id=registration_form.data['state_select_field'],
-            country_id=registration_form.data['country_select_field'],)
-        db.session.add(registered_user)
+        #update the instantiated registered user model from the form and push that model to the database.
+        reg_user = RegisteredUser.query.filter(RegisteredUser.registered_id == user_id).first()
+        reg_user.first_name=str(registration_form.data['first_name_field'])
+        reg_user.last_name=registration_form.data['last_name_field']
+        reg_user.address_line_one=registration_form.data['address_line_one_field']
+        reg_user.address_line_two=registration_form.data['address_line_two_field']
+        reg_user.city=registration_form.data['city_field']
+        reg_user.state_id=registration_form.data['state_select_field']
+        reg_user.country_id=registration_form.data['country_select_field']
+        db.session.add(reg_user)
         db.session.commit()
-        flask.flash("This data was saved to the database!")
+        flask.flash("This data was updated to the database!")
         return flask.redirect(flask.url_for(
-            'user_detail',user_id=registered_user.registered_id))
+            'user_detail',user_id=reg_user.registered_id))
     return flask.render_template(
             template_name_or_list='update_user.html',
             registration_form=registration_form,)
