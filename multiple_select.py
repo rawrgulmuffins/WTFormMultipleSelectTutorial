@@ -28,7 +28,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Insert_random_string_here'
 #Set this configuration to True if you want to see all of the SQL generated.
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///basic_app3.sqlite'
 
 #WTForms configuration strings
 app.config['WTF_CSRF_ENABLED'] = True
@@ -200,7 +200,7 @@ I'm importanting from here as if this was it's own seperate file.
 """
 import wtforms
 import wtforms.validators as validators
-from flask.ext.wtf import Form
+from flask_wtf import Form
 
 class RegistrationForm(Form):
     """
@@ -243,15 +243,16 @@ def populate_form_choices(registration_form):
         state_names.append(state.state_name)
     #choices need to come in the form of a list comprised of enumerated lists
     #example [('cpp', 'C++'), ('py', 'Python'), ('text', 'Plain Text')]
-    state_choices = list(enumerate(state_names))
+    state_choices = list(enumerate(state_names,start=1))
     country_names = []
     for country in countries:
         country_names.append(country.country_name)
-    country_choices = list(enumerate(country_names))
+    country_choices = list(enumerate(country_names,start=1))
+    print('country choices:', country_choices)
     #now that we've built our choices, we need to set them.
     registration_form.state_select_field.choices = state_choices
     registration_form.country_select_field.choices = country_choices
-
+    registration_form.first_name_field.size = 100
 @app.route('/', methods=['GET', 'POST'])
 def demonstration():
     """
@@ -296,6 +297,12 @@ def user_detail(user_id):
     return flask.render_template(
         template_name_or_list='success.html',
         user=user)
+
+@app.route('/create_db')
+def create_db():
+    db.create_all()
+    create_example_data()
+    return "db created"
 
 #Finally, this is for development purposes only. I normally have this in a
 #file called RunServer.py. For actually delivering your application you should
