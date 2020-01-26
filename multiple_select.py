@@ -252,7 +252,7 @@ def populate_form_choices(registration_form):
     #now that we've built our choices, we need to set them.
     registration_form.state_select_field.choices = state_choices
     registration_form.country_select_field.choices = country_choices
-    
+
 @app.route('/', methods=['GET', 'POST'])
 def demonstration():
     """
@@ -290,6 +290,20 @@ def demonstration():
     return flask.render_template(
             template_name_or_list='registration.html',
             registration_form=registration_form,)
+"""
+More lengthy explanation of what happens in above function:
+1)Instantiate form (registration_form)
+2)The basic instantiated form doesn't have the country and states in the select lists so add those using 
+the custom populate_form_choices method.
+If GET:
+3) Render form in the template
+If POST:
+3) Using the RegisteredUser Model instantiate a new  registered_user object using data from registration_form  
+(In simple cases this could be done with the populate_obj method like so:
+registration_form.populate_obj(registered_user).  But according to the WTForms documentation this is only 
+advisable with simple cases.)
+4) Run your sqlalchemy add and commit methods to save the updated registered_user object back to the db.
+"""
 
 @app.route('/user/<user_id>')
 def user_detail(user_id):
