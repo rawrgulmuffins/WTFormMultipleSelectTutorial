@@ -1,5 +1,5 @@
 {% from "macros.html" import render_field %}
-<form method=post action="/demonstration">
+<form method=post >
     {{registration_form.hidden_tag()}}
   <dl>
     {{ render_field(registration_form.first_name_field) }}
