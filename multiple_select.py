@@ -14,7 +14,7 @@ http://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-i-hello-world
 
 Author: Alex Lord
 """
-from flask import Flask
+from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.exc import IntegrityError
 
@@ -28,7 +28,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'Insert_random_string_here'
 #Set this configuration to True if you want to see all of the SQL generated.
 app.config['SQLALCHEMY_ECHO'] = False
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///basic_app3.sqlite'
 
 #WTForms configuration strings
 app.config['WTF_CSRF_ENABLED'] = True
@@ -200,7 +200,7 @@ I'm importanting from here as if this was it's own seperate file.
 """
 import wtforms
 import wtforms.validators as validators
-from flask.ext.wtf import Form
+from flask_wtf import Form
 
 class RegistrationForm(Form):
     """
@@ -243,16 +243,17 @@ def populate_form_choices(registration_form):
         state_names.append(state.state_name)
     #choices need to come in the form of a list comprised of enumerated lists
     #example [('cpp', 'C++'), ('py', 'Python'), ('text', 'Plain Text')]
-    state_choices = list(enumerate(state_names))
+    state_choices = list(enumerate(state_names,start=1))
     country_names = []
     for country in countries:
         country_names.append(country.country_name)
-    country_choices = list(enumerate(country_names))
+    country_choices = list(enumerate(country_names,start=1))
+    print('country choices:', country_choices)
     #now that we've built our choices, we need to set them.
     registration_form.state_select_field.choices = state_choices
     registration_form.country_select_field.choices = country_choices
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/demonstration', methods=['GET', 'POST'])
 def demonstration():
     """
     This will render a template that displays all of the form objects if it's
@@ -273,6 +274,7 @@ def demonstration():
     if flask.request.method == 'POST' and registration_form.validate():
         #If we're making a post request and we passed all the validators then
         #create a registered user model and push that model to the database.
+        print("DEBUGGGGG")
         registered_user = RegisteredUser(
             first_name=registration_form.data['first_name_field'],
             last_name=registration_form.data['last_name_field'],
@@ -283,12 +285,71 @@ def demonstration():
             country_id=registration_form.data['country_select_field'],)
         db.session.add(registered_user)
         db.session.commit()
+        print("DEBUGGGGGENDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
         flask.flash("This data was saved to the database!")
         return flask.redirect(flask.url_for(
             'user_detail',user_id=registered_user.registered_id))
     return flask.render_template(
             template_name_or_list='registration.html',
             registration_form=registration_form,)
+"""
+More lengthy explanation of what happens in above function:
+1)Instantiate form (registration_form)
+2)The basic instantiated form doesn't have the country and states in the select lists so add those using 
+the custom populate_form_choices method.
+If GET:
+3) Render form in the template
+If POST:
+3) Using the RegisteredUser Model instantiate a new  registered_user object using data from registration_form  
+(In simple cases this could be done with the populate_obj method like so:
+registration_form.populate_obj(registered_user).  But according to the WTForms documentation this is only 
+advisable with simple cases.)
+4) Run your sqlalchemy add and commit methods to save the updated registered_user object back to the db.
+"""
+
+@app.route('/update_user/<user_id>', methods=['GET', 'POST'])
+def update_user(user_id):
+    """
+    This will render a template that displays all of the form objects if it's
+    a Get request. If the use is attempting to Post then this view will push
+    the data to the database.
+    """
+    #instantiate the user you want to update
+    reg_user = RegisteredUser.query.filter(RegisteredUser.registered_id == user_id).first()
+    #instantiate the form and populate it with values from the instantiated user
+    registration_form = RegistrationForm(
+        first_name_field=reg_user.first_name,
+        last_name_field=reg_user.last_name,
+        address_line_one_field=reg_user.address_line_one,
+        address_line_two_field=reg_user.address_line_two,
+        city_field=reg_user.city,
+        state_select_field=reg_user.state_id,
+        country_select_field=reg_user.country_id
+    )
+    #the form includes some drop downs for selecting states and countries. this function adds these to the form
+    populate_form_choices(registration_form)
+
+    if flask.request.method == 'POST' and registration_form.validate():
+        #If we're making a post request and we passed all the validators then
+        #update the instantiated registered user model from the form and push that model to the database.
+        reg_user = RegisteredUser.query.filter(RegisteredUser.registered_id == user_id).first()
+        reg_user.first_name=str(registration_form.data['first_name_field'])
+        reg_user.last_name=registration_form.data['last_name_field']
+        reg_user.address_line_one=registration_form.data['address_line_one_field']
+        reg_user.address_line_two=registration_form.data['address_line_two_field']
+        reg_user.city=registration_form.data['city_field']
+        reg_user.state_id=registration_form.data['state_select_field']
+        reg_user.country_id=registration_form.data['country_select_field']
+        db.session.add(reg_user)
+        db.session.commit()
+        flask.flash("This data was updated to the database!")
+        return flask.redirect(flask.url_for(
+            'user_detail',user_id=reg_user.registered_id))
+    return flask.render_template(
+            template_name_or_list='update_user.html',
+            registration_form=registration_form,)
+
+
 
 @app.route('/user/<user_id>')
 def user_detail(user_id):
@@ -297,6 +358,25 @@ def user_detail(user_id):
         template_name_or_list='success.html',
         user=user)
 
+@app.route('/')
+def home_page():
+    return render_template('index.html')
+
+@app.route('/create_all')
+def create_all():
+    db.create_all()
+    create_example_data()
+    message = "DB Created! (A SQLite DB File Should Appear In Your Project Folder.  " \
+              "Also, if changes are made to the model, running this again should " \
+              "add these changes to the db.)"
+    return render_template('index.html', message=message)
+
+@app.route('/drop_all')
+def drop_all():
+    db.drop_all()
+    message = "DB Dropped!!)"
+    return render_template('index.html', message=message)
+
 #Finally, this is for development purposes only. I normally have this in a
 #file called RunServer.py. For actually delivering your application you should
 #run behind a web server of some kind (Apache, Nginix, Heroku).
@@ -304,4 +384,4 @@ def user_detail(user_id):
 if __name__ == '__main__':
     db.create_all()
     create_example_data()
-    app.run(debug=True)
+    app.run(debug=False)
